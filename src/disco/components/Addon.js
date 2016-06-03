@@ -53,6 +53,11 @@ export class Addon extends React.Component {
     themeAction,
   }
 
+  constructor() {
+    super();
+    this.state = {hideError: false};
+  }
+
   getBrowserThemeData() {
     return JSON.stringify(getThemeData(this.props));
   }
@@ -62,7 +67,7 @@ export class Addon extends React.Component {
     const errorMessage = this.props.errorMessage || i18n.gettext('An unexpected error occurred');
     return status === ERROR ? (<div className="error">
       <p className="message">{errorMessage}</p>
-      <a className="close" href="#" onClick={this.props.closeErrorAction}>Close</a>
+      <a className="close" href="#" onClick={this.closeErrorAction}>Close</a>
     </div>) : null;
   }
 
@@ -104,6 +109,11 @@ export class Addon extends React.Component {
     );
   }
 
+  closeErrorAction = (e) => {
+    e.preventDefault();
+    this.setState({hideError: true});
+  }
+
   handleClick = (e) => {
     e.preventDefault();
   }
@@ -127,6 +137,12 @@ export class Addon extends React.Component {
       theme: type === THEME_TYPE,
     });
 
+    const installButtonProps = {slug};
+    if (this.state.hideError) {
+      installButtonProps.shouldRetrieveStatus = true;
+      this.setState({hideError: false});
+    }
+
     return (
       <div className={addonClasses}>
         {this.getThemeImage()}
@@ -141,7 +157,7 @@ export class Addon extends React.Component {
             {this.getDescription()}
           </div>
           <div className="install-button">
-            <InstallButton slug={slug} />
+            <InstallButton {...installButtonProps} />
           </div>
         </div>
       </div>

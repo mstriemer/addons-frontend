@@ -29,7 +29,7 @@ export class InstallButton extends React.Component {
     uninstall: PropTypes.func.isRequired,
     url: PropTypes.string,
     downloadProgress: PropTypes.number,
-    setInitialStatus: PropTypes.func.isRequired,
+    retrieveStatus: PropTypes.func.isRequired,
     slug: PropTypes.string.isRequired,
     status: PropTypes.oneOf(validStates),
     type: PropTypes.oneOf(validAddonTypes),
@@ -41,8 +41,15 @@ export class InstallButton extends React.Component {
   }
 
   componentDidMount() {
-    const { guid, installURL, setInitialStatus, slug } = this.props;
-    setInitialStatus({guid, installURL, slug});
+    const { guid, installURL, retrieveStatus, slug } = this.props;
+    retrieveStatus({guid, installURL, slug});
+  }
+
+  componentWillReceiveProps(nextProps) {
+    const { guid, installURL, retrieveStatus, slug } = this.props;
+    if (nextProps.shouldRetrieveStatus) {
+      retrieveStatus({guid, installURL, slug});
+    }
   }
 
   handleClick = () => {
@@ -97,15 +104,21 @@ export function mapStateToProps(state, ownProps) {
 }
 
 export function makeProgressHandler(dispatch, slug) {
-  return (addonInstall) => {
-    if (addonInstall.state === 'STATE_DOWNLOADING') {
+  return (addonInstall, e) => {
+    console.log(addonInstall, e);
+    const { state } = addonInstall;
+    if (state === 'STATE_DOWNLOADING') {
       const downloadProgress = parseInt(
         100 * addonInstall.progress / addonInstall.maxProgress, 10);
       dispatch({type: 'DOWNLOAD_PROGRESS', payload: {slug, downloadProgress}});
-    } else if (addonInstall.state === 'STATE_INSTALLING') {
+    } else if (state === 'STATE_INSTALLING') {
       dispatch({type: 'START_INSTALL', payload: {slug}});
-    } else if (addonInstall.state === 'STATE_INSTALLED') {
+    } else if (state === 'STATE_INSTALLED') {
       dispatch({type: 'INSTALL_COMPLETE', payload: {slug}});
+    } else if (e.type === 'onDownloadFailed') {
+      dispatch({type: 'INSTALL_ERROR', payload: {slug, errorMessage: 'Download failed.'}});
+    } else if (e.type === 'onInstallFailed') {
+      dispatch({type: 'INSTALL_ERROR', payload: {slug, errorMessage: 'Install failed.'}});
     }
   };
 }
@@ -115,7 +128,7 @@ export function mapDispatchToProps(dispatch) {
     return {};
   }
   return {
-    setInitialStatus({ guid, installURL, slug }) {
+    retrieveStatus({ guid, installURL, slug }) {
       const addonManager = new AddonManager(guid, installURL);
       const payload = {guid, slug, url: installURL};
       return addonManager.getAddon()

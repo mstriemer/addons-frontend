@@ -82,7 +82,8 @@ export class DiscoPane extends React.Component {
 }
 
 function loadedAddons(state) {
-  return state.discoResults.map((result) => ({...result, ...state.addons[result.addon]}));
+  return state.discoResults.map((result) => ({...result, ...state.addons[result.addon],
+                                              ...state.installations[result.addon]}));
 }
 
 export function loadDataIfNeeded({ store: { dispatch, getState }}) {
