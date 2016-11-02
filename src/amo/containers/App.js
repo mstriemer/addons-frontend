@@ -1,4 +1,4 @@
-/* global window */
+/* global navigator, window */
 
 import React, { PropTypes } from 'react';
 import Helmet from 'react-helmet';
@@ -9,7 +9,9 @@ import 'core/fonts/fira.scss';
 import 'amo/css/App.scss';
 import SearchForm from 'amo/components/SearchForm';
 import translate from 'core/i18n/translate';
+import { addChangeListeners } from 'core/addonManager';
 import { startLoginUrl } from 'core/api';
+import { INSTALL_STATE } from 'core/constants';
 import Footer from 'amo/components/Footer';
 import MastHead from 'amo/components/MastHead';
 
@@ -19,6 +21,7 @@ export class AppBase extends React.Component {
     FooterComponent: PropTypes.node.isRequired,
     MastHeadComponent: PropTypes.node.isRequired,
     children: PropTypes.node,
+    handleGlobalEvent: PropTypes.func.isRequired,
     handleLogIn: PropTypes.func.isRequired,
     i18n: PropTypes.object.isRequired,
     isAuthenticated: PropTypes.bool,
@@ -28,6 +31,12 @@ export class AppBase extends React.Component {
   static defaultProps = {
     FooterComponent: Footer,
     MastHeadComponent: MastHead,
+  }
+
+  componentDidMount() {
+    const { handleGlobalEvent } = this.props;
+    // Use addonManager.addChangeListener to setup and filter events.
+    addChangeListeners(handleGlobalEvent, navigator.mozAddonManager);
   }
 
   accountButton() {
@@ -69,7 +78,13 @@ export const setupMapStateToProps = (_window) => (state) => ({
   },
 });
 
+export const mapDispatchToProps = (dispatch) => ({
+  handleGlobalEvent(payload) {
+    dispatch({ type: INSTALL_STATE, payload });
+  },
+});
+
 export default compose(
-  connect(setupMapStateToProps()),
+  connect(setupMapStateToProps(), mapDispatchToProps),
   translate({ withRef: true }),
 )(AppBase);
