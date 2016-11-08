@@ -220,7 +220,7 @@ $installStripeColor2: #00c42e;
   &.enabled,
   &.installed {
     input + label::before {
-      background: $switchBackgroundOn url('./img/tick.svg') no-repeat 35% 50%;
+      background: $switchBackgroundOn url('./tick.svg') no-repeat 35% 50%;
 
       [dir=rtl] & {
         background-position: 65% 50%;
@@ -246,7 +246,7 @@ $installStripeColor2: #00c42e;
 }
 
 @for $i from 1 through 100 {
-  [data-download-progress="#{$i}"] .progress {
+  [data-progress="#{$i}"] .progress {
     transform: translateX(#{percentage($i - 100) / 100});
 
     [dir=rtl] & {

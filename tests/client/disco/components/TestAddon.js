@@ -697,14 +697,10 @@ describe('<Addon />', () => {
       const iconUrl = 'whatevs';
       const name = 'test-addon';
 
-      const fakeConfig = {
-        has: sinon.stub().withArgs('useUiTour').returns(false),
-      };
       const { install } = mapDispatchToProps(
         dispatch,
         {
           _addonManager: fakeAddonManager,
-          _config: fakeConfig,
           i18n,
           iconUrl,
           name,
@@ -731,32 +727,6 @@ describe('<Addon />', () => {
             type: CLOSE_INFO,
           }));
         });
-    });
-
-    it('should use uiTour', () => {
-      const fakeAddonManager = getFakeAddonManagerWrapper();
-      const i18n = getFakeI18nInst();
-      const dispatch = sinon.spy();
-      const iconUrl = 'whatevs';
-      const name = 'test-addon';
-
-      const fakeConfig = {
-        has: sinon.stub().withArgs('useUiTour').returns(true),
-        get: sinon.stub().withArgs('useUiTour').returns(true),
-      };
-      const fakeDispatchEvent = sinon.stub();
-      const { install } = mapDispatchToProps(
-        dispatch,
-        {
-          _addonManager: fakeAddonManager,
-          _dispatchEvent: fakeDispatchEvent,
-          _config: fakeConfig,
-          i18n,
-          iconUrl,
-          name,
-        });
-      return install({ guid, installURL })
-        .then(() => assert.ok(fakeDispatchEvent.called));
     });
 
     it('dispatches error when addonManager.install throws', () => {

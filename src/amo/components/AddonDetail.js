@@ -2,7 +2,7 @@
 import React, { PropTypes } from 'react';
 
 import AddonMeta from 'amo/components/AddonMeta';
-import InstallButton from 'core/components/InstallButton';
+import InstallButton from 'core/containers/InstallButton';
 import DefaultOverallRating from 'amo/components/OverallRating';
 import ScreenShots from 'amo/components/ScreenShots';
 import translate from 'core/i18n/translate';

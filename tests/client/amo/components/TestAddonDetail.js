@@ -10,7 +10,7 @@ import AddonDetail, { allowedDescriptionTags }
   from 'amo/components/AddonDetail';
 import { OverallRatingWithI18n } from 'amo/components/OverallRating';
 import I18nProvider from 'core/i18n/Provider';
-import InstallButton from 'core/components/InstallButton';
+import InstallButton from 'core/containers/InstallButton';
 import { fakeAddon } from 'tests/client/amo/helpers';
 import { getFakeI18nInst } from 'tests/client/helpers';
 
