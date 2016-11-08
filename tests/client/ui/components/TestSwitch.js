@@ -2,10 +2,10 @@ import React from 'react';
 import { Simulate, renderIntoDocument } from 'react-addons-test-utils';
 import { findDOMNode } from 'react-dom';
 
-import InstallButton from 'ui/components/InstallButton';
+import Switch from 'ui/components/Switch';
 
 
-describe('<InstallButton />', () => {
+describe('<Switch />', () => {
   function renderButton(props = {}) {
     const renderProps = {
       dispatch: sinon.spy(),
@@ -15,7 +15,7 @@ describe('<InstallButton />', () => {
     };
 
     return renderIntoDocument(
-      <InstallButton {...renderProps} />);
+      <Switch {...renderProps} />);
   }
 
   it('is off when not checked or disabled', () => {

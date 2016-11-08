@@ -24,7 +24,7 @@ import {
 } from 'core/constants';
 import translate from 'core/i18n/translate';
 import log from 'core/logger';
-import InstallButton from 'ui/components/InstallButton';
+import Switch from 'ui/components/Switch';
 
 export class InstallButtonBase extends React.Component {
   static propTypes = {
@@ -101,7 +101,7 @@ export class InstallButtonBase extends React.Component {
     const isDisabled = status === UNKNOWN;
     // const progress = status === DOWNLOADING ? downloadProgress : undefined;
     return (
-      <InstallButton
+      <Switch
         checked={isChecked} disabled={isDisabled} progress={0} name={slug}
       />
     );

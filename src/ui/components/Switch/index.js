@@ -3,9 +3,9 @@ import classNames from 'classnames';
 
 import { getThemeData } from 'disco/themePreview';
 
-import './InstallButton.scss';
+import './Switch.scss';
 
-export default class InstallButton extends React.Component {
+export default class Switch extends React.Component {
   static propTypes = {
     checked: PropTypes.bool,
     className: PropTypes.string,
@@ -35,7 +35,7 @@ export default class InstallButton extends React.Component {
     const identifier = `install-button-${name}`;
 
     const hasProgress = progress !== undefined && progress !== Infinity;
-    const classes = classNames('InstallButton', className, {
+    const classes = classNames('Switch', className, {
       downloading: hasProgress,
       installing: checked && progress === Infinity,
       success,
