@@ -1,21 +1,21 @@
 import React, { PropTypes } from 'react';
 import { compose } from 'redux';
-import config from 'config';
+// import config from 'config';
 
-import * as addonManager from 'core/addonManager';
+// import * as addonManager from 'core/addonManager';
 import {
-  CLOSE_INFO,
+  // CLOSE_INFO,
   DOWNLOADING,
   DISABLED,
   ENABLED,
   ENABLING,
-  INSTALL_CATEGORY,
+  // INSTALL_CATEGORY,
   INSTALLING,
   INSTALLED,
-  SET_ENABLE_NOT_AVAILABLE,
-  SHOW_INFO,
+  // SET_ENABLE_NOT_AVAILABLE,
+  // SHOW_INFO,
   THEME_TYPE,
-  UNINSTALL_CATEGORY,
+  // UNINSTALL_CATEGORY,
   UNINSTALLED,
   UNINSTALLING,
   UNKNOWN,
@@ -23,11 +23,12 @@ import {
   validInstallStates as validStates,
 } from 'core/constants';
 import translate from 'core/i18n/translate';
-import log from 'core/logger';
+// import log from 'core/logger';
 import Switch from 'ui/components/Switch';
 
 export class InstallButtonBase extends React.Component {
   static propTypes = {
+    downloadProgress: PropTypes.number,
     i18n: PropTypes.object.isRequired,
     enable: PropTypes.func,
     guid: PropTypes.string.isRequired,
@@ -55,6 +56,9 @@ export class InstallButtonBase extends React.Component {
       case INSTALLING:
         label = i18n.gettext('Installing %(name)s.');
         break;
+      case ENABLING:
+        label = i18n.gettext('Enabling %(name)s.');
+        break;
       case ENABLED:
       case INSTALLED:
         label = i18n.gettext('%(name)s is installed and enabled. Click to uninstall.');
@@ -73,6 +77,16 @@ export class InstallButtonBase extends React.Component {
         break;
     }
     return i18n.sprintf(label, { name });
+  }
+
+  getDownloadProgress() {
+    const { downloadProgress, status } = this.props;
+    if (status === DOWNLOADING) {
+      return downloadProgress;
+    } else if ([INSTALLING, ENABLING].includes(status)) {
+      return Infinity;
+    }
+    return undefined;
   }
 
   handleClick = () => {
@@ -99,151 +113,153 @@ export class InstallButtonBase extends React.Component {
 
     const isChecked = [INSTALLED, INSTALLING, ENABLING, ENABLED].includes(status);
     const isDisabled = status === UNKNOWN;
-    // const progress = status === DOWNLOADING ? downloadProgress : undefined;
+    const isSuccess = status === INSTALLED;
+
     return (
       <Switch
-        checked={isChecked} disabled={isDisabled} progress={0} name={slug}
+        checked={isChecked} disabled={isDisabled} progress={this.getDownloadProgress()} name={slug}
+        success={isSuccess} label={this.getLabel()}
       />
     );
   }
 }
 
-export function mapStateToProps(state, ownProps, { _tracking = tracking } = {}) {
-  const installation = state.installations[ownProps.guid] || {};
-  return {
-    ...installation,
-    installTheme(node, guid, name, _themeAction = themeAction) {
-      _themeAction(node, THEME_INSTALL);
-      _tracking.sendEvent({ action: 'theme', category: INSTALL_CATEGORY, label: name });
-    },
-  };
-}
-
-export function makeProgressHandler(dispatch, guid) {
-  return (addonInstall, e) => {
-    if (addonInstall.state === 'STATE_DOWNLOADING') {
-      const downloadProgress = parseInt(
-        (100 * addonInstall.progress) / addonInstall.maxProgress, 10);
-      dispatch({ type: DOWNLOAD_PROGRESS, payload: { guid, downloadProgress } });
-    } else if (e.type === 'onDownloadFailed') {
-      dispatch({ type: INSTALL_ERROR, payload: { guid, error: DOWNLOAD_FAILED } });
-    } else if (e.type === 'onInstallFailed') {
-      dispatch({ type: INSTALL_ERROR, payload: { guid, error: INSTALL_FAILED } });
-    }
-  };
-}
-
-export function mapDispatchToProps(dispatch, { _tracking = tracking,
-                                               _addonManager = addonManager,
-                                               ...ownProps } = {}) {
-  if (config.get('server')) {
-    return {};
-  }
-
-  function showInfo({ name, iconUrl }) {
-    dispatch({
-      type: SHOW_INFO,
-      payload: {
-        addonName: name,
-        imageURL: iconUrl,
-        closeAction: () => {
-          dispatch({ type: CLOSE_INFO });
-        },
-      },
-    });
-  }
-
-  return {
-    setCurrentStatus({ guid, installURL }) {
-      const payload = { guid, url: installURL };
-      return _addonManager.getAddon(guid)
-        .then(
-          (addon) => {
-            const status = addon.isActive && addon.isEnabled ? ENABLED : DISABLED;
-            dispatch({
-              type: INSTALL_STATE,
-              payload: { ...payload, status },
-            });
-          },
-          () => {
-            log.info(`Add-on "${guid}" not found so setting status to UNINSTALLED`);
-            dispatch({
-              type: INSTALL_STATE,
-              payload: { ...payload, status: UNINSTALLED },
-            });
-          }
-        )
-        .catch((err) => {
-          log.error(err);
-          // Dispatch a generic error should the success/error functions throw.
-          dispatch({
-            type: INSTALL_STATE,
-            payload: { guid, status: ERROR, error: FATAL_ERROR },
-          });
-        });
-    },
-
-    enable({ _showInfo = showInfo } = {}) {
-      const { guid, name, iconUrl, i18n } = ownProps;
-      return _addonManager.enable(guid)
-        .then(() => {
-          _showInfo({ name, iconUrl, i18n });
-        })
-        .catch((err) => {
-          if (err && err.message === SET_ENABLE_NOT_AVAILABLE) {
-            log.info(`addon.setEnabled not available. Unable to enable ${guid}`);
-          } else {
-            log.error(err);
-            dispatch({
-              type: INSTALL_STATE,
-              payload: { guid, status: ERROR, error: FATAL_ERROR },
-            });
-          }
-        });
-    },
-
-    install() {
-      const { guid, i18n, iconUrl, installURL, name } = ownProps;
-      dispatch({ type: START_DOWNLOAD, payload: { guid } });
-      return _addonManager.install(installURL, makeProgressHandler(dispatch, guid))
-        .then(() => {
-          _tracking.sendEvent({
-            action: 'addon',
-            category: INSTALL_CATEGORY,
-            label: name,
-          });
-          showInfo({ name, iconUrl, i18n });
-        })
-        .catch((err) => {
-          log.error(err);
-          dispatch({
-            type: INSTALL_STATE,
-            payload: { guid, status: ERROR, error: FATAL_INSTALL_ERROR },
-          });
-        });
-    },
-
-    uninstall({ guid, name, type }) {
-      dispatch({ type: INSTALL_STATE, payload: { guid, status: UNINSTALLING } });
-      const action = getAction(type);
-      return _addonManager.uninstall(guid)
-        .then(() => {
-          _tracking.sendEvent({
-            action,
-            category: UNINSTALL_CATEGORY,
-            label: name,
-          });
-        })
-        .catch((err) => {
-          log.error(err);
-          dispatch({
-            type: INSTALL_STATE,
-            payload: { guid, status: ERROR, error: FATAL_UNINSTALL_ERROR },
-          });
-        });
-    },
-  };
-}
+// export function mapStateToProps(state, ownProps, { _tracking = tracking } = {}) {
+//   const installation = state.installations[ownProps.guid] || {};
+//   return {
+//     ...installation,
+//     installTheme(node, guid, name, _themeAction = themeAction) {
+//       _themeAction(node, THEME_INSTALL);
+//       _tracking.sendEvent({ action: 'theme', category: INSTALL_CATEGORY, label: name });
+//     },
+//   };
+// }
+//
+// export function makeProgressHandler(dispatch, guid) {
+//   return (addonInstall, e) => {
+//     if (addonInstall.state === 'STATE_DOWNLOADING') {
+//       const downloadProgress = parseInt(
+//         (100 * addonInstall.progress) / addonInstall.maxProgress, 10);
+//       dispatch({ type: DOWNLOAD_PROGRESS, payload: { guid, downloadProgress } });
+//     } else if (e.type === 'onDownloadFailed') {
+//       dispatch({ type: INSTALL_ERROR, payload: { guid, error: DOWNLOAD_FAILED } });
+//     } else if (e.type === 'onInstallFailed') {
+//       dispatch({ type: INSTALL_ERROR, payload: { guid, error: INSTALL_FAILED } });
+//     }
+//   };
+// }
+//
+// export function mapDispatchToProps(dispatch, { _tracking = tracking,
+//                                                _addonManager = addonManager,
+//                                                ...ownProps } = {}) {
+//   if (config.get('server')) {
+//     return {};
+//   }
+//
+//   function showInfo({ name, iconUrl }) {
+//     dispatch({
+//       type: SHOW_INFO,
+//       payload: {
+//         addonName: name,
+//         imageURL: iconUrl,
+//         closeAction: () => {
+//           dispatch({ type: CLOSE_INFO });
+//         },
+//       },
+//     });
+//   }
+//
+//   return {
+//     setCurrentStatus({ guid, installURL }) {
+//       const payload = { guid, url: installURL };
+//       return _addonManager.getAddon(guid)
+//         .then(
+//           (addon) => {
+//             const status = addon.isActive && addon.isEnabled ? ENABLED : DISABLED;
+//             dispatch({
+//               type: INSTALL_STATE,
+//               payload: { ...payload, status },
+//             });
+//           },
+//           () => {
+//             log.info(`Add-on "${guid}" not found so setting status to UNINSTALLED`);
+//             dispatch({
+//               type: INSTALL_STATE,
+//               payload: { ...payload, status: UNINSTALLED },
+//             });
+//           }
+//         )
+//         .catch((err) => {
+//           log.error(err);
+//           // Dispatch a generic error should the success/error functions throw.
+//           dispatch({
+//             type: INSTALL_STATE,
+//             payload: { guid, status: ERROR, error: FATAL_ERROR },
+//           });
+//         });
+//     },
+//
+//     enable({ _showInfo = showInfo } = {}) {
+//       const { guid, name, iconUrl, i18n } = ownProps;
+//       return _addonManager.enable(guid)
+//         .then(() => {
+//           _showInfo({ name, iconUrl, i18n });
+//         })
+//         .catch((err) => {
+//           if (err && err.message === SET_ENABLE_NOT_AVAILABLE) {
+//             log.info(`addon.setEnabled not available. Unable to enable ${guid}`);
+//           } else {
+//             log.error(err);
+//             dispatch({
+//               type: INSTALL_STATE,
+//               payload: { guid, status: ERROR, error: FATAL_ERROR },
+//             });
+//           }
+//         });
+//     },
+//
+//     install() {
+//       const { guid, i18n, iconUrl, installURL, name } = ownProps;
+//       dispatch({ type: START_DOWNLOAD, payload: { guid } });
+//       return _addonManager.install(installURL, makeProgressHandler(dispatch, guid))
+//         .then(() => {
+//           _tracking.sendEvent({
+//             action: 'addon',
+//             category: INSTALL_CATEGORY,
+//             label: name,
+//           });
+//           showInfo({ name, iconUrl, i18n });
+//         })
+//         .catch((err) => {
+//           log.error(err);
+//           dispatch({
+//             type: INSTALL_STATE,
+//             payload: { guid, status: ERROR, error: FATAL_INSTALL_ERROR },
+//           });
+//         });
+//     },
+//
+//     uninstall({ guid, name, type }) {
+//       dispatch({ type: INSTALL_STATE, payload: { guid, status: UNINSTALLING } });
+//       const action = getAction(type);
+//       return _addonManager.uninstall(guid)
+//         .then(() => {
+//           _tracking.sendEvent({
+//             action,
+//             category: UNINSTALL_CATEGORY,
+//             label: name,
+//           });
+//         })
+//         .catch((err) => {
+//           log.error(err);
+//           dispatch({
+//             type: INSTALL_STATE,
+//             payload: { guid, status: ERROR, error: FATAL_UNINSTALL_ERROR },
+//           });
+//         });
+//     },
+//   };
+// }
 
 export default compose(
   translate,
